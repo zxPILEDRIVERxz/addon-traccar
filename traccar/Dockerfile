@@ -1,33 +1,38 @@
-ARG BUILD_FROM=ghcr.io/hassio-addons/base:16.3.6
+ARG BUILD_FROM=ghcr.io/hassio-addons/base:17.2.5
 # hadolint ignore=DL3006
 FROM ${BUILD_FROM}
 
 # Set shell
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-# Copy root filesystem
-COPY rootfs /
+# Install dependencies
+RUN \
+    apk update && \
+    apk add --no-cache \
+        mariadb-client \
+        nginx \
+        nss \
+        openjdk17-jre-headless \
+        unzip \
+        xmlstarlet
 
 # Set working dir
 WORKDIR /opt/traccar
 
-# Setup base
-ARG TRACCAR_VERSION="v6.7.1"
+# Copy root filesystem
+COPY rootfs /
+
+# Install Traccar 6.7.3
+ARG TRACCAR_VERSION="v6.7.3"
 RUN \
-    apk add --no-cache \
-        mariadb-client=10.11.11-r0 \
-        nginx=1.26.3-r0 \
-        nss=3.105-r0 \
-        openjdk17-jre-headless=17.0.15_p6-r0 \
-        xmlstarlet=1.6.1-r2 \
-    \
-    && curl -J -L -o /tmp/traccar.zip \
-      "https://github.com/traccar/traccar/releases/download/${TRACCAR_VERSION}/traccar-other-${TRACCAR_VERSION#v}.zip" \
-    \
-    && mkdir -p /opt/traccar \
-    && unzip -d /opt/traccar /tmp/traccar.zip \
-    \
-    && rm -fr /tmp/*
+    curl -J -L -o /tmp/traccar.zip \
+        "https://github.com/traccar/traccar/releases/download/${TRACCAR_VERSION}/traccar-other-${TRACCAR_VERSION#v}.zip" && \
+    unzip -d /opt/traccar /tmp/traccar.zip && \
+    rm -fr /tmp/* && \
+    chmod +x /opt/traccar/run.sh
+
+# Expose ports
+EXPOSE 8082/tcp 5055/tcp
 
 # Build arguments
 ARG BUILD_ARCH
@@ -45,13 +50,13 @@ LABEL \
     io.hass.arch="${BUILD_ARCH}" \
     io.hass.type="addon" \
     io.hass.version=${BUILD_VERSION} \
-    maintainer="Franck Nijhof <frenck@addons.community>" \
+    maintainer="Your Name <your.email@example.com>" \
     org.opencontainers.image.title="${BUILD_NAME}" \
     org.opencontainers.image.description="${BUILD_DESCRIPTION}" \
-    org.opencontainers.image.vendor="Home Assistant Community Add-ons" \
-    org.opencontainers.image.authors="Franck Nijhof <frenck@addons.community>" \
+    org.opencontainers.image.vendor="Custom Add-ons" \
+    org.opencontainers.image.authors="Your Name <your.email@example.com>" \
     org.opencontainers.image.licenses="MIT" \
-    org.opencontainers.image.url="https://addons.community" \
+    org.opencontainers.image.url="https://github.com/yourusername/addon-traccar" \
     org.opencontainers.image.source="https://github.com/${BUILD_REPOSITORY}" \
     org.opencontainers.image.documentation="https://github.com/${BUILD_REPOSITORY}/blob/main/README.md" \
     org.opencontainers.image.created=${BUILD_DATE} \
